@@ -13,15 +13,19 @@
 @implementation WHRequestBaseAPI
 - (void)startRequest:(WHRequestAPISuccess)success failure:(WHRequestAPIFailure)failure
 {
+  _loading = YES;
+  
   NSString *paramErrMsg = nil;
   BOOL valid = [self paramsAreValid:&paramErrMsg];
   if (!valid) {
+    _loading = NO;
     failure(paramErrMsg);
     return;
   }
   
   WHRequestService *service = [[WHRequestServiceFactory sharedInstance] serviceWithIdentifier:[self serviceIdentifier]];
   if (!service) {
+    _loading = NO;
     failure(@"缺少响应处理service");
     return;
   }
@@ -30,6 +34,7 @@
   
   [WHRequester requestToUrlString:requestAddress params:[self paramsDic] method:[self requestMethod] contentType:[self requestContentType] handler:^(NSDictionary * _Nonnull respData, NSError * _Nonnull error) {
     if (error) {
+      _loading = NO;
       failure(error.localizedDescription);
       return ;
     }
@@ -37,17 +42,14 @@
     NSString *respCheckErrMsg = nil;
     id realData = [service checkAndGetDatasFromResponse:respData error:&respCheckErrMsg];
     if (respCheckErrMsg) {
+      _loading = NO;
       failure(respCheckErrMsg);
       return;
     }
     
+    _loading = NO;
     success(realData);
   }];
-}
-
-- (BOOL)loading
-{
-  return NO;
 }
 
 #pragma mark - WHRequestAPIInfoProtocol
